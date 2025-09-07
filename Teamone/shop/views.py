@@ -48,3 +48,12 @@ def product_detail(request, slug):
 # ------------------------------
 # Subscriptions & Dashboard
 # ------------------------------
+
+def _monthly_price_for_tier(tier: str) -> Decimal:
+    """Helper to get monthly price for tier from settings, returns Decimal."""
+    tier_map = getattr(settings, "SUBSCRIPTION_TIERS", {"basic": 10.0, "pro": 50.0, "research": 200.0})
+    try:
+        monthly = Decimal(str(tier_map.get(tier, 0.0)))
+    except (InvalidOperation, TypeError):
+        monthly = Decimal("0.0")
+    return monthly
