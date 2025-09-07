@@ -23,3 +23,23 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Cart(models.Model):
+    user = models.ForeignKey("shop.User", related_name="carts", on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    checked_out = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Cart {self.id} for {self.user}"
+
+    @property
+    def total(self):
+       return sum([item.subtotal for item in self.items.all()])
+
+
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart, related_name="items", on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
