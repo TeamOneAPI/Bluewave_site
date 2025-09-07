@@ -313,3 +313,22 @@ def create_cart_checkout_session(request):
         return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"sessionId": checkout_session.id})
+
+
+@login_required
+def cart_success(request):
+    """
+    Redirect users to My Orders after a successful cart payment.
+    """
+    return redirect("my_orders")
+
+
+def cart_cancel(request):
+    return render(request, "shop/cart_cancel.html")
+
+@login_required
+def my_orders(request):
+    orders = Cart.objects.filter(user=request.user, checked_out=True).order_by("-created_at")
+    return render(request, "shop/orders.html", {"orders": orders})
+
+
