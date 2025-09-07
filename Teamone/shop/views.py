@@ -57,3 +57,10 @@ def _monthly_price_for_tier(tier: str) -> Decimal:
     except (InvalidOperation, TypeError):
         monthly = Decimal("0.0")
     return monthly
+
+
+@login_required
+def dashboard(request):
+    subs = request.user.subscriptions.all()
+    latest_sub = subs.order_by("-end_date").first()
+    api_token = latest_sub.api_key if latest_sub and latest_sub.active else None
