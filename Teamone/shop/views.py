@@ -37,3 +37,14 @@ def product_list(request):
     page_number = request.GET.get("page")
     page = paginator.get_page(page_number)
     return render(request, "shop/product_list.html", {"page": page})
+
+
+def product_detail(request, slug):
+    product = get_object_or_404(Product, slug=slug)
+    metrics = product.metrics.all()[:10]
+    return render(request, "shop/product_detail.html", {"product": product, "metrics": metrics})
+
+
+# ------------------------------
+# Subscriptions & Dashboard
+# ------------------------------
