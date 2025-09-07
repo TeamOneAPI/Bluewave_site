@@ -162,3 +162,60 @@ def stripe_webhook(request):
         return HttpResponse(status=400)
 
     event_type = event.get("type")
+
+    # checkout completed
+    if event_type == "checkout.session.completed":
+        sess = event["data"]["object"]
+        checkout_id = sess.get("id")
+        metadata = sess.get("metadata", {}) or {}
+        user_id = metadata.get("user_id")
+
+        # ✅ if it's a subscription
+        if metadata.get("tier"):
+            months = int(metadata.get("months", 1))
+            tier = metadata.get("tier", "basic")
+            sub = Subscription.objects.filter(stripe_checkout_session=checkout_id).first()
+            if not sub and user_id:
+                sub = Subscription.objects.filter(user__id=user_id, tier=tier, active=False).order_by("-start_date").first()
+            if sub:
+                sub.active = True
+                sub.months = months
+                sub.end_date = timezone.now() + timedelta(days=30 * months)
+                monthly_price = _monthly_price_for_tier(sub.tier)
+                sub.price = (monthly_price * Decimal(sub.months)).quantize(Decimal("0.01"))
+                sub.api_key = generate_subscription_jwt(sub)
+                sub.save()
+
+        # ✅ if it's a cart checkout
+        elif metadata.get("cart_id"):
+            cart_id = metadata["cart_id"]
+            cart = Cart.objects.filter(id=cart_id, user__id=user_id).first()
+            if cart:
+                cart.checked_out = True
+                cart.save()
+
+    return HttpResponse(status=200)
+
+
+
+def stripe_success(request):
+    return render(request, "shop/stripe_success.html")
+
+
+def stripe_cancel(request):
+    return render(request, "shop/stripe_cancel.html")
+
+
+# ------------------------------
+# Cart
+# ------------------------------
+
+@login_required
+def add_to_cart(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    cart, _ = Cart.objects.get_or_create(user=request.user, checked_out=False)
+    item, created = CartItem.objects.get_or_create(cart=cart, product=product)
+    if not created:
+        item.quantity += 1
+        item.save()
+    return redirect("view_cart")
