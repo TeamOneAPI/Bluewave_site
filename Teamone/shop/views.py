@@ -11,3 +11,17 @@ from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.views.decorators.http import require_POST
+
+from .models import (
+    Cart,
+    CartItem,
+    Product,
+    EnvironmentalMetric,
+    Subscription,
+)
+from .jwt_utils import generate_subscription_jwt
+
+# Stripe config
+stripe.api_key = getattr(settings, "STRIPE_SECRET_KEY", "")
+
+User = get_user_model()
