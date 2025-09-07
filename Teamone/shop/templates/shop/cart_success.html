@@ -1,0 +1,13 @@
+{% extends "shop/base.html" %}
+{% block content %}
+  <div class="text-center mt-5">
+    <h3>Payment successful! 🎉</h3>
+    <p>Redirecting you to your orders...</p>
+  </div>
+
+  <script>
+    setTimeout(() => {
+      window.location.href = "{% url 'my_orders' %}";
+    }, 2000);
+  </script>
+{% endblock %}

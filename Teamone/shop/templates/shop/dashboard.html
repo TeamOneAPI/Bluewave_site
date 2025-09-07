@@ -1,0 +1,362 @@
+{% extends "shop/base.html" %}
+{% block content %}
+<div class="row">
+  <div class="col-lg-10 mx-auto">
+    <h2 class="mb-4">Welcome, {{ user.username }}</h2>
+
+    <!-- Subscriptions -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header bg-primary text-white">Your Subscriptions</div>
+      <div class="card-body">
+        {% if subscriptions %}
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Tier</th>
+                <th>Months</th>
+                <th>Status</th>
+                <th>End Date</th>
+                <th>Total Price</th>
+                <th>API Token</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+  {% for s in subscriptions %}
+  <tr>
+    <td>{{ s.tier|title }}</td>
+    <td>{{ s.months }}</td>
+    <td>
+      {% if s.active %}
+        <span class="badge bg-success">Active</span>
+      {% else %}
+        <span class="badge bg-secondary">Pending</span>
+      {% endif %}
+    </td>
+    <td>{{ s.end_date|date:"Y-m-d" }}</td>
+    <td>${{ s.price }}</td>  {# ✅ direct from model #}
+    <td>
+      {% if s.api_key %}
+        <code>{{ s.api_key|truncatechars:25 }}</code>
+        <button class="btn btn-sm btn-outline-secondary copy-btn" data-token="{{ s.api_key }}">Copy</button>
+      {% else %}
+        <span class="text-muted">No token yet</span>
+      {% endif %}
+    </td>
+    <td>
+      {% if s.active %}
+        <a href="{% url 'cancel_subscription' s.id %}" class="btn btn-sm btn-danger">Cancel</a>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</tbody>
+
+          </table>
+        {% else %}
+          <p>No subscriptions yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Buy subscription -->
+<div class="card mb-4 shadow-sm">
+  <div class="card-header bg-secondary text-white">Buy a Subscription</div>
+  <div class="card-body">
+    <div class="row g-2 align-items-center">
+      <div class="col-md-4">
+        <label for="tier" class="form-label">Tier</label>
+        <select id="tier" class="form-select">
+          <option value="basic">Basic – ${{ tier_prices.basic }}/month</option>
+          <option value="pro">Pro – ${{ tier_prices.pro }}/month</option>
+          <option value="research">Research – ${{ tier_prices.research }}/month</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label for="months" class="form-label">Months</label>
+        <input id="months" type="number" min="1" max="24" value="1" class="form-control">
+      </div>
+      <div class="col-md-4">
+        <p class="mb-1"><strong>Total: $<span id="totalPrice">{{ tier_prices.basic }}</span></strong></p>
+        <button id="subscription-checkout-button" class="btn btn-success w-100">
+          Checkout with Stripe
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+function updateTotal() {
+  const tier = document.getElementById('tier').value;
+  const months = parseInt(document.getElementById('months').value || 1);
+
+  const prices = {
+    basic: parseFloat("{{ tier_prices.basic }}"),
+    pro: parseFloat("{{ tier_prices.pro }}"),
+    research: parseFloat("{{ tier_prices.research }}")
+  };
+
+  const total = prices[tier] * months;
+  document.getElementById('totalPrice').innerText = total.toFixed(2);
+}
+
+document.getElementById('tier').addEventListener('change', updateTotal);
+document.getElementById('months').addEventListener('input', updateTotal);
+
+const subCheckoutBtn = document.getElementById("subscription-checkout-button");
+if (subCheckoutBtn) {
+  subCheckoutBtn.addEventListener("click", async () => {
+    subCheckoutBtn.disabled = true;
+    subCheckoutBtn.innerText = "Processing...";
+
+    const tier = document.getElementById('tier').value;
+    const months = document.getElementById('months').value || 1;
+
+    const res = await fetch("{% url 'create_checkout_session' %}", {
+      method: "POST",
+      headers: {"Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}"},
+      body: JSON.stringify({tier, months})
+    });
+    const data = await res.json();
+
+    if (data.sessionId) {
+      const stripe = Stripe("{{ STRIPE_PUBLISHABLE_KEY }}");
+      stripe.redirectToCheckout({ sessionId: data.sessionId });
+    } else {
+      alert(data.error || "Something went wrong with subscription checkout.");
+      subCheckoutBtn.disabled = false;
+      subCheckoutBtn.innerText = "Checkout with Stripe";
+    }
+  });
+}
+</script>
+
+
+    <!-- Simulate Subscription (for testing only)
+    <div class="card mb-4">
+      <div class="card-header">Dev Testing</div>
+      <div class="card-body">
+        <form method="post" action="{% url 'simulate_subscription' %}">
+          {% csrf_token %}
+          <select name="tier" class="form-select mb-2">
+            <option value="basic">Basic</option>
+            <option value="pro">Pro</option>
+            <option value="research">Research</option>
+          </select>
+          <input type="number" name="months" value="1" min="1" max="24" class="form-control mb-2"/>
+          <button class="btn btn-warning">Simulate Subscription</button>
+        </form>
+      </div>
+    </div> 
+  -->
+
+   <!-- Cart -->
+<div class="card mb-4 shadow-sm">
+  <div class="card-header bg-dark text-white">Your Shopping Cart</div>
+  <div class="card-body">
+    {% if cart_items %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Qty</th>
+            <th>Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in cart_items %}
+          <tr>
+            <td>{{ item.product.name }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>${{ item.subtotal }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p><strong>Total: ${{ cart_total }}</strong></p>
+      <div class="d-flex gap-2">
+        <a href="{% url 'view_cart' %}" class="btn btn-outline-primary btn-sm">Go to Cart</a>
+        <button id="dashboard-cart-checkout-button" class="btn btn-success btn-sm">
+          Checkout with Stripe
+        </button>
+      </div>
+    {% else %}
+      <p>Your cart is empty.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- My Orders 
+<div class="card mb-4 shadow-sm">
+  <div class="card-header bg-dark text-white">Your Shopping Cart</div>
+  <div class="card-body">
+    {% if cart_items %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Qty</th>
+            <th>Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in cart_items %}
+          <tr>
+            <td>{{ item.product.name }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>${{ item.subtotal }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p><strong>Total: ${{ cart_total }}</strong></p>
+      <a href="{% url 'view_cart' %}" class="btn btn-outline-primary btn-sm">Go to Cart</a>
+      <button id="dashboard-cart-checkout-button" class="btn btn-success btn-sm">Checkout</button>
+      <a href="{% url 'my_orders' %}" class="btn btn-secondary btn-sm">My Orders</a>  ✅ new 
+    {% else %}
+      <p>Your cart is empty.</p>
+      <a href="{% url 'my_orders' %}" class="btn btn-secondary btn-sm">View Past Orders</a>  ✅ still show link 
+    {% endif %}
+  </div>
+</div>
+-->
+
+<!-- Past Orders -->
+<div class="card mb-4 shadow-sm">
+  <div class="card-header bg-info text-white">Your Orders</div>
+  <div class="card-body">
+    {% if orders %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Items</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in orders %}
+          <tr>
+            <td>#{{ order.id }}</td>
+            <td>
+              {% for item in order.items.all %}
+                {{ item.quantity }} × {{ item.product.name }}<br>
+              {% endfor %}
+            </td>
+            <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No past orders yet.</p>
+    {% endif %}
+  </div>
+</div>
+
+
+<!-- Stripe -->
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+const cartCheckoutBtn = document.getElementById("dashboard-cart-checkout-button");
+
+if (cartCheckoutBtn) {
+  cartCheckoutBtn.addEventListener("click", async () => {
+    cartCheckoutBtn.disabled = true;
+    cartCheckoutBtn.innerText = "Processing...";
+
+    const res = await fetch("{% url 'create_cart_checkout_session' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}"
+      }
+    });
+    const data = await res.json();
+
+    if (data.sessionId) {
+      const stripe = Stripe("{{ STRIPE_PUBLISHABLE_KEY }}");
+      stripe.redirectToCheckout({ sessionId: data.sessionId });
+    } else {
+      alert(data.error || "Something went wrong with checkout.");
+      cartCheckoutBtn.disabled = false;
+      cartCheckoutBtn.innerText = "Checkout with Stripe";
+    }
+  });
+}
+</script>
+
+
+    <!-- API JWT -->
+    <div class="card mb-4">
+      <div class="card-header">API Access Token</div>
+      <div class="card-body">
+        {% if api_token %}
+          <div class="input-group">
+            <input type="text" class="form-control" id="apiToken" value="{{ api_token }}" readonly>
+            <button class="btn btn-outline-secondary" type="button" onclick="copyToken()">Copy</button>
+          </div>
+        {% else %}
+          <p>No active API token. Buy a subscription to generate one.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function updateTotal() {
+  const tier = document.getElementById('tier').value;
+  const months = parseInt(document.getElementById('months').value || 1);
+
+  const prices = {
+    basic: parseFloat("{{ tier_prices.basic }}"),
+    pro: parseFloat("{{ tier_prices.pro }}"),
+    research: parseFloat("{{ tier_prices.research }}")
+  };
+
+  const total = prices[tier] * months;
+  document.getElementById('totalPrice').innerText = total.toFixed(2);
+}
+
+document.getElementById('tier').addEventListener('change', updateTotal);
+document.getElementById('months').addEventListener('input', updateTotal);
+
+document.getElementById('checkout-button').onclick = async function() {
+  const tier = document.getElementById('tier').value;
+  const months = document.getElementById('months').value || 1;
+  const res = await fetch("{% url 'create_checkout_session' %}", {
+    method: "POST",
+    headers: {"Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}"},
+    body: JSON.stringify({tier, months})
+  });
+  const data = await res.json();
+  if (data.sessionId) {
+    const stripe = Stripe("{{ STRIPE_PUBLISHABLE_KEY }}");
+    stripe.redirectToCheckout({sessionId: data.sessionId});
+  } else {
+    alert(data.error);
+  }
+};
+
+document.querySelectorAll('.copy-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const token = btn.getAttribute('data-token');
+    navigator.clipboard.writeText(token);
+    btn.innerText = "Copied!";
+    setTimeout(() => { btn.innerText = "Copy"; }, 2000);
+  });
+});
+
+function copyToken() {
+  const tokenField = document.getElementById("apiToken");
+  tokenField.select();
+  tokenField.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(tokenField.value).then(() => {
+    alert("Token copied to clipboard!");
+  });
+}
+</script>
+{% endblock %}
