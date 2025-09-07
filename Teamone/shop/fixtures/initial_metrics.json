@@ -1,0 +1,50 @@
+[
+  {
+    "model": "shop.environmentalmetric",
+    "pk": 1,
+    "fields": {
+      "product": 1,
+      "recorded_at": "2025-08-01T12:00:00Z",
+      "salinity": 3.2,
+      "ph": 7.5,
+      "pollutant_index": 12.3,
+      "notes": "Normal operation."
+    }
+  },
+  {
+    "model": "shop.environmentalmetric",
+    "pk": 2,
+    "fields": {
+      "product": 1,
+      "recorded_at": "2025-08-02T12:00:00Z",
+      "salinity": 3.1,
+      "ph": 7.4,
+      "pollutant_index": 11.9,
+      "notes": "Stable output."
+    }
+  },
+  {
+    "model": "shop.environmentalmetric",
+    "pk": 3,
+    "fields": {
+      "product": 2,
+      "recorded_at": "2025-08-01T12:00:00Z",
+      "salinity": 2.8,
+      "ph": 7.0,
+      "pollutant_index": 10.1,
+      "notes": "Compact unit stable."
+    }
+  },
+  {
+    "model": "shop.environmentalmetric",
+    "pk": 4,
+    "fields": {
+      "product": 3,
+      "recorded_at": "2025-08-01T12:00:00Z",
+      "salinity": 3.5,
+      "ph": 7.2,
+      "pollutant_index": 14.5,
+      "notes": "Marine environment sample."
+    }
+  }
+]
