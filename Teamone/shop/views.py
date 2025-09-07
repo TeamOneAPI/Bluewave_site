@@ -64,3 +64,29 @@ def dashboard(request):
     subs = request.user.subscriptions.all()
     latest_sub = subs.order_by("-end_date").first()
     api_token = latest_sub.api_key if latest_sub and latest_sub.active else None
+
+    # cart summary
+    cart = Cart.objects.filter(user=request.user, checked_out=False).first()
+    orders = Cart.objects.filter(user=request.user, checked_out=True).prefetch_related("items__product")
+
+    cart_items, cart_total = [], Decimal("0.00")
+    if cart:
+        cart_items = cart.items.select_related("product").all()
+        cart_total = sum([i.subtotal for i in cart_items])
+
+    return render(
+        request,
+        "shop/dashboard.html",
+        {
+            "subscriptions": subs,  # ✅ pass actual Subscription queryset
+            "api_token": api_token,
+            "STRIPE_PUBLISHABLE_KEY": settings.STRIPE_PUBLISHABLE_KEY,
+            "tier_prices": getattr(
+                settings, "SUBSCRIPTION_TIERS",
+                {"basic": 10.0, "pro": 50.0, "research": 200.0}
+            ),
+            "cart_items": cart_items,
+            "cart_total": cart_total,
+            "orders": orders,
+        },
+    )
