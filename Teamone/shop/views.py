@@ -268,3 +268,48 @@ def simulate_subscription(request):
 
     return redirect("dashboard")
 
+
+@login_required
+def cancel_subscription(request, sub_id):
+    sub = get_object_or_404(Subscription, id=sub_id, user=request.user)
+    sub.active = False
+    sub.api_key = None
+    sub.save()
+    return redirect("dashboard")
+
+@login_required
+def create_cart_checkout_session(request):
+    """
+    Create a Stripe Checkout session for all items in the user's cart.
+    """
+    cart = Cart.objects.filter(user=request.user, checked_out=False).first()
+    if not cart or not cart.items.exists():
+        return JsonResponse({"error": "Cart is empty"}, status=400)
+
+    # Build line items from cart
+    line_items = []
+    for item in cart.items.select_related("product").all():
+        line_items.append({
+            "price_data": {
+                "currency": "usd",
+                "product_data": {
+                    "name": item.product.name,
+                },
+                "unit_amount": int(item.product.price * 100),  # Stripe expects cents
+            },
+            "quantity": item.quantity,
+        })
+
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            mode="payment",
+            line_items=line_items,
+            success_url=request.build_absolute_uri("/cart-success/") + "?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url=request.build_absolute_uri("/cart-cancel/"),
+            metadata={"user_id": str(request.user.id), "cart_id": str(cart.id)},
+        )
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"sessionId": checkout_session.id})
