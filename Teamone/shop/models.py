@@ -62,3 +62,26 @@ class EnvironmentalMetric(models.Model):
 
     class Meta:
         ordering = ["-recorded_at"]
+
+
+class Subscription(models.Model):
+    TIER_CHOICES = [
+        ("basic", "Basic"),
+        ("pro", "Pro"),
+        ("research", "Research"),
+    ]
+
+    months = models.IntegerField(default=1)
+    user = models.ForeignKey("shop.User", related_name="subscriptions", on_delete=models.CASCADE)
+    tier = models.CharField(max_length=20, choices=TIER_CHOICES)
+    start_date = models.DateTimeField(auto_now_add=True)
+    end_date = models.DateTimeField()
+    active = models.BooleanField(default=False)
+
+    # API token (JWT)
+    api_key = models.CharField(max_length=512, blank=True, null=True)
+
+    # Stripe integration
+    order_id = models.UUIDField(default=uuid.uuid4, editable=False)
+    stripe_checkout_session = models.CharField(max_length=255, blank=True, null=True)
+    stripe_subscription_id = models.CharField(max_length=255, blank=True, null=True)
