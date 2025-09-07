@@ -85,3 +85,23 @@ class Subscription(models.Model):
     order_id = models.UUIDField(default=uuid.uuid4, editable=False)
     stripe_checkout_session = models.CharField(max_length=255, blank=True, null=True)
     stripe_subscription_id = models.CharField(max_length=255, blank=True, null=True)
+    
+    # Pricing
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    TIER_PRICES = {
+        "basic": Decimal("10.00"),
+        "pro": Decimal("50.00"),
+        "research": Decimal("200.00"),
+    }
+
+    def save(self, *args, **kwargs):
+        # auto-assign price if not set
+        if not self.price or self.price == Decimal("0.00"):
+            monthly_price = self.TIER_PRICES.get(self.tier, Decimal("0.00"))
+            self.price = (monthly_price * Decimal(self.months)).quantize(Decimal("0.01"))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user} - {self.tier} (${self.price}) ({'active' if self.active else 'inactive'})"
+    
