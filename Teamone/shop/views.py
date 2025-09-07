@@ -109,3 +109,25 @@ def create_checkout_session(request):
         months = 1
     if months > 24:
         months = 24
+
+    PRICE_MAP = getattr(settings, "STRIPE_PRICE_MAP", {})
+    price_id = PRICE_MAP.get(tier)
+    if not price_id:
+        return JsonResponse({"error": "Invalid tier or Stripe price not configured"}, status=400)
+
+    end_date = timezone.now() + timedelta(days=30 * months)
+
+    monthly_price = _monthly_price_for_tier(tier)
+    total_price = (monthly_price * Decimal(months)).quantize(Decimal("0.01"))
+
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            mode="payment",
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=request.build_absolute_uri("/stripe-success/") + "?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url=request.build_absolute_uri("/stripe-cancel/"),
+            metadata={"user_id": str(request.user.id), "tier": tier, "months": str(months)},
+        )
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
