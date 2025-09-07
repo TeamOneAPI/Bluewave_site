@@ -1,0 +1,41 @@
+[
+  {
+    "model": "shop.product",
+    "pk": 1,
+    "fields": {
+      "name": "AquaPure 5000",
+      "slug": "aquapure-5000",
+      "description": "High-capacity desalination unit for industrial use. Produces up to 5000 liters/day.",
+      "price": "150000.00",
+      "stock": 5,
+      "image": "products/aquapure-5000.jpg",
+      "created_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 2,
+    "fields": {
+      "name": "EcoDesal Compact",
+      "slug": "ecodesal-compact",
+      "description": "Compact desalination unit suitable for households and small offices. Produces 200 liters/day.",
+      "price": "3500.00",
+      "stock": 20,
+      "image": "products/ecodesal-compact.jpg",
+      "created_at": "2025-01-02T00:00:00Z"
+    }
+  },
+  {
+    "model": "shop.product",
+    "pk": 3,
+    "fields": {
+      "name": "MarineWave Pro",
+      "slug": "marinewave-pro",
+      "description": "Portable desalination unit designed for marine vessels and field operations. Produces 1000 liters/day.",
+      "price": "12000.00",
+      "stock": 10,
+      "image": "products/marinewave-pro.jpg",
+      "created_at": "2025-01-03T00:00:00Z"
+    }
+  }
+]
