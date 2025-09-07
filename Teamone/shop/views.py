@@ -131,3 +131,34 @@ def create_checkout_session(request):
         )
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+    # create a pending subscription
+    Subscription.objects.create(
+        user=request.user,
+        tier=tier,
+        months=months,
+        end_date=end_date,
+        active=False,
+        stripe_checkout_session=checkout_session.id,
+        price=total_price,
+    )
+
+    return JsonResponse({"sessionId": checkout_session.id})
+
+
+@csrf_exempt
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
+    webhook_secret = getattr(settings, "STRIPE_WEBHOOK_SECRET", None)
+
+    try:
+        if webhook_secret:
+            event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+        else:
+            event = json.loads(payload)
+    except Exception:
+        return HttpResponse(status=400)
+
+    event_type = event.get("type")
