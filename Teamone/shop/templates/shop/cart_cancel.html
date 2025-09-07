@@ -1,0 +1,14 @@
+{% extends "shop/base.html" %}
+{% block content %}
+<div class="row">
+  <div class="col-lg-8 mx-auto">
+    <div class="card shadow-sm mt-5">
+      <div class="card-body text-center">
+        <h2 class="text-danger mb-3">❌ Payment Cancelled</h2>
+        <p class="lead">It looks like you cancelled the checkout. Your cart is still saved.</p>
+        <a href="{% url 'view_cart' %}" class="btn btn-warning mt-3">Return to Cart</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
