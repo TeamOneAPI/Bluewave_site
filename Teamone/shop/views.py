@@ -25,3 +25,15 @@ from .jwt_utils import generate_subscription_jwt
 stripe.api_key = getattr(settings, "STRIPE_SECRET_KEY", "")
 
 User = get_user_model()
+
+
+# ------------------------------
+# Product views
+# ------------------------------
+
+def product_list(request):
+    qs = Product.objects.all().order_by("-created_at")
+    paginator = Paginator(qs, getattr(settings, "PRODUCTS_PER_PAGE", 12))
+    page_number = request.GET.get("page")
+    page = paginator.get_page(page_number)
+    return render(request, "shop/product_list.html", {"page": page})
