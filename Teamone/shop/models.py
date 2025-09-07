@@ -43,3 +43,22 @@ class CartItem(models.Model):
     cart = models.ForeignKey(Cart, related_name="items", on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
+
+    @property
+    def subtotal(self) -> Decimal:
+        return Decimal(self.quantity) * self.product.price
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product.name}"
+
+
+class EnvironmentalMetric(models.Model):
+    product = models.ForeignKey(Product, related_name="metrics", on_delete=models.CASCADE)
+    recorded_at = models.DateTimeField(default=timezone.now)
+    salinity = models.FloatField(null=True, blank=True)
+    ph = models.FloatField(null=True, blank=True)
+    pollutant_index = models.FloatField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-recorded_at"]
