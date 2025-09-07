@@ -219,3 +219,52 @@ def add_to_cart(request, product_id):
         item.quantity += 1
         item.save()
     return redirect("view_cart")
+
+
+@login_required
+def view_cart(request):
+    cart = Cart.objects.filter(user=request.user, checked_out=False).first()
+    items = cart.items.select_related("product").all() if cart else []
+    total = cart.total if cart else 0
+    return render(request, "shop/cart.html", {"cart": cart, "items": items, "total": total})
+
+
+
+@login_required
+def remove_from_cart(request, item_id):
+    CartItem.objects.filter(id=item_id, cart__user=request.user).delete()
+    return redirect("view_cart")
+
+
+# ------------------------------
+# Dev helper
+# ------------------------------
+
+@login_required
+@require_POST
+def simulate_subscription(request):
+    months = int(request.POST.get("months", 1)) if request.POST.get("months") else 1
+    tier = request.POST.get("tier", "basic")
+    if months <= 0:
+        months = 1
+    if months > 240:
+        months = 240
+
+    end_date = timezone.now() + timedelta(days=30 * months)
+    monthly_price = _monthly_price_for_tier(tier)
+    total_price = (monthly_price * Decimal(months)).quantize(Decimal("0.01"))
+
+    sub = Subscription.objects.create(
+        user=request.user,
+        tier=tier,
+        months=months,
+        end_date=end_date,
+        active=True,
+        price=total_price,
+    )
+
+    sub.api_key = generate_subscription_jwt(sub)
+    sub.save()
+
+    return redirect("dashboard")
+
