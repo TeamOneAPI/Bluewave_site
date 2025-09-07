@@ -90,3 +90,22 @@ def dashboard(request):
             "orders": orders,
         },
     )
+
+
+@login_required
+def create_checkout_session(request):
+    """Create a Stripe Checkout session for a subscription."""
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    tier = data.get("tier", "basic")
+    months = int(data.get("months", 1))
+    if months <= 0:
+        months = 1
+    if months > 24:
+        months = 24
